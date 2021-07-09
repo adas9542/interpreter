@@ -96,216 +96,278 @@ let interpreter ( (input : string), (output : string )) : unit =
      | BIND -> "bind"
      | LET -> "let"
      | END -> "end"
-  in *)
+  in
+   *)
+  let comList = List.map stringtocommand strList 
   
-    (* converts input string list to command list *)
-(* 
-  let rec view (input:string list):unit =
-    match input with
-    | [] -> ()
-    | hd::tl -> print_string hd; print_string "\n"; view(tl)
-  in  *)
+  in 
 
-  let comList = List.map stringtocommand strList in 
-
-  (* function to view the list of commands 
-  let rec viewcom (input: command list):unit = 
+  (* function to view the list of commands  *)
+  (* let rec viewcom (input: command list):unit = 
     match input with 
     | [] -> ()
     | hd::tl -> print_string (comtostr hd); print_string "\n"; viewcom(tl)
 
   in *)
 
-  (* finds the value and returns it *)
+  (* finds the value and returns it or the input *)
   let rec find (Name k) (givenlist) = 
     match givenlist with
-    | (Name(firstv),secondv)::tl -> if firstv = k then secondv 
-                                    else find (Name(k)) tl
+    | ((Name(firstv),secondv)::hd)::tl -> if firstv = k then secondv 
+                                    else find (Name(k)) (hd::tl)
+    | []::tl -> find (Name(k)) (tl)
     | _ -> (Name k) 
-      (* (invalid_arg "not valid input") *)
 in
 
-  (* cl is the list of commands, stack is where the stackvalues are stored, env is where the bindings are stored*)
-   let rec processor cl stack env = 
-    (* slowly build up the stack where you iterate through the cl and update the stack *)
-    match (cl, stack, env) with
-    | (QUIT::restofCommands, _, _) -> ()
-    (* | (LET::restofCommands, restofStack, env) -> processor restofCommands ([]::restofStack) (insert (Let) ([]) env) *)
-    | (POP::restofCommands, firstitempop::restofStack, env) -> processor restofCommands restofStack env
-    | (NEG::restofCommands, hdelem::restofStack, env) -> (match hdelem with 
-                                                    | Int(numb) -> processor restofCommands (Int(-1*numb)::restofStack) env
-                                                    | Name(givenname) -> (match (find(Name(givenname)) env ) with 
-                                                                          | Name(givenname) -> processor restofCommands (Error::hdelem::restofStack) env
-                                                                          | _ -> processor (NEG::restofCommands) ((find(Name(givenname)) env)::restofStack) env)
-                                                    | _-> processor restofCommands (Error::hdelem::restofStack) env) 
-                                                         (* find the value associated with the names here*)
-    | (TOSTRING::restofCommands,firstelem::restofStack, env) -> (match firstelem with 
-                                                    | Bool(bval) -> processor restofCommands (String (":" ^ (svtostr(Bool(bval)) ^ ":" ))::restofStack) env
-                                                    | _ -> processor restofCommands (String (svtostr(firstelem))::restofStack) env )
-    | (PUSH(item)::restofCommands, stack, env) -> print_string "PUSH"; print_string (svtostr item); print_string "\n"; print_string "\n";processor restofCommands (item::stack) env
-    | (PRINTLN::restofCommands, firstval::restofStack, env) -> (match firstval with 
-                                                    | String first -> file_write first; processor restofCommands restofStack env
-                                                    | _ -> processor restofCommands (Error::firstval::restofStack) env)
-    | (NOT::restofCommands, firsteleme :: restofStack, env) -> (match firsteleme with
-                                                    | Bool b -> processor restofCommands ((Bool(not b))::restofStack) env
-                                                    | Name b ->  (match (find(Name(b)) env ) with 
-                                                              | Name(givenname) -> processor restofCommands (Error::firsteleme :: restofStack) env
-                                                              | _ -> processor (NOT::restofCommands) ((find (Name(b)) env )::restofStack) env)
-                                                    | _ -> processor restofCommands (Error::firsteleme :: restofStack) env)
-    (* bottom are functions that require 2 arguments *)
-    (* find if the vlue for the Name(fvalue) exists, if it exists then have Name b = that value otherwise return error*)
-    | (BIND::restofCommands, Name(fvalue)::Name b::restofStack, env) -> (match (find (Name(fvalue)) env) with
-                                                    | Int(newvalue) -> processor restofCommands ((Unit)::restofStack) ((Name(b), Int(newvalue)) :: env)
-                                                    | Bool(newvalue) -> processor restofCommands ((Unit)::restofStack) ((Name(b), Bool(newvalue)) :: env)
-                                                    | String(newvalue) -> processor restofCommands ((Unit)::restofStack) ((Name(b), String(newvalue)) :: env)
-                                                    | Unit -> processor restofCommands ((Unit)::restofStack) ((Name(b), Unit) :: env)
-                                                    | _ -> processor restofCommands (Error::Name(fvalue)::Name b::restofStack) env)     
-    | (BIND::restofCommands, firstval::secondval::restofStack, env) -> (match (firstval,secondval) with
-                                                    | (Int(fvalue), Name(b)) -> processor restofCommands ((Unit)::restofStack) ((Name(b), Int(fvalue)) :: env)
-                                                    | (Bool(fvalue),Name(b)) ->  processor restofCommands ((Unit)::restofStack) ((Name(b), Bool(fvalue)) :: env)
-                                                    | (String(fvalue),Name(b)) -> processor restofCommands ((Unit)::restofStack) ((Name(b), String(fvalue)) :: env)
-                                                    | (Unit,Name(b)) -> processor restofCommands ((Unit)::restofStack) ((Name(b), Unit) :: env)
-                                                    | _-> processor restofCommands (Error::firstval::secondval :: restofStack) env)
+let rec viewstack(input: stackValue list list) = 
+  match input with
+  | (firstelem::hd)::tl -> print_string (svtostr(firstelem)); viewstack (hd::tl)
+  | []::tl -> viewstack (tl)
+  | [] -> print_string "\n\n";()  
 
-    | (CAT::restofCommands, firstelement::secondelement::restofStack, env) -> (match (firstelement,secondelement) with
-                                                    | (String(a),String(b))-> processor restofCommands (String(a ^ b) ::restofStack) env                                                    (*what if neither evaluates to anything besides a name what if one evaluates to a string and the other one doesnt*)
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                    | (String(a),String(b)) -> processor restofCommands (String(a ^ b) ::restofStack) env
-                                                                    | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                    | (String(a),String(b)) -> processor restofCommands (String(a ^ b) ::restofStack) env
-                                                                    | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                    | (String(a),String(b)) -> processor restofCommands (String(a ^ b) ::restofStack) env
-                                                                    | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env)
-                                                    | (_,_) -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env)
-    | (AND::restofCommands, firstelement::secondelement :: restofStack, env) -> (match (firstelement,secondelement) with
-                                                    | (Bool b, Bool c)-> print_string "AND"; processor restofCommands ((Bool(b && c))::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                          | (Bool(a),Bool(b)) -> processor restofCommands ((Bool(a && b))::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                          | (Bool(a),Bool(b)) -> processor restofCommands ((Bool(a && b))::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                          | (Bool(a),Bool(b)) -> processor restofCommands ((Bool(a && b))::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (_,_) -> print_string "here"; processor restofCommands (Error::firstelement::secondelement :: restofStack) env)
-    | (OR::restofCommands, firstelement :: secondelement :: restofStack, env) -> (match (firstelement,secondelement) with
-                                                    | (Bool b, Bool c)-> processor restofCommands (Bool(b || c)::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                      | (Bool(a),Bool(b)) -> processor restofCommands (Bool(a || b)::restofStack) env
-                                                                      | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                      | (Bool(a),Bool(b)) -> processor restofCommands (Bool(a || b)::restofStack) env
-                                                                      | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                      | (Bool(a),Bool(b)) -> processor restofCommands (Bool(a || b)::restofStack) env
-                                                                      | _ -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::firstelement::secondelement :: restofStack) env)
-    | (EQUAL::restofCommands, firstelem::secondelem::restofStack, env) -> (match (firstelem, secondelem) with
-                                                    | (Int(a),Int(b))-> processor restofCommands ((Bool(a=b))::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                      | (Int(a),Int(b)) -> processor restofCommands ((Bool(a=b))::restofStack) env
-                                                                      | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                      | (Int(a),Int(b)) -> processor restofCommands ((Bool(a=b))::restofStack) env
-                                                                      | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                      | (Int(a),Int(b)) -> processor restofCommands ((Bool(a=b))::restofStack) env
-                                                                      | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::stack) env)
-    | (LESSTHAN::restofCommands, firstelem::secondelem::restofStack, env) -> (match (firstelem, secondelem) with
-                                                    | (Int(a),Int(b))->  processor restofCommands ((Bool(a>b))::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                    | (Int(a),Int(b)) -> processor restofCommands ((Bool(a>b))::restofStack) env
-                                                                    | _ -> print_string "error name" ; processor restofCommands (Error::stack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                    | (Int(a),Int(b)) -> processor restofCommands ((Bool(a>b))::restofStack) env
-                                                                    | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                    | (Int(a),Int(b)) -> processor restofCommands ((Bool(a>b))::restofStack) env
-                                                                    | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::stack) env)
-    | (SWAP::restofCommands, firstitem::seconditem::restofStack, env) -> processor restofCommands (seconditem::firstitem::restofStack) env             
-    | (ADD::restofCommands, firstelem::secondelem::restofStack, env) -> (match (firstelem, secondelem) with
-                                                    | (Int(a),Int(b))-> processor restofCommands (Int(a+b)::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                        | (Int(a), Int(b)) -> processor restofCommands (Int(a+b)::restofStack) env
-                                                                        | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                        | (Int(a), Int(b)) -> processor restofCommands (Int(a+b)::restofStack) env
-                                                                        | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                        | (Int(a), Int(b)) -> processor restofCommands (Int(a+b)::restofStack) env
-                                                                        | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::stack) env)
-    | (SUB::restofCommands, firstelem::secondelem::restofStack, env) ->  (match (firstelem, secondelem) with
-                                                    | (Int(a),Int(b))-> processor restofCommands (Int(b-a)::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                        | (Int(a), Int(b)) -> processor restofCommands (Int(b-a)::restofStack) env
-                                                                        | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                        | (Int(a), Int(b)) -> processor restofCommands (Int(b-a)::restofStack) env
-                                                                        | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                        | (Int(a), Int(b)) -> processor restofCommands (Int(b-a)::restofStack) env
-                                                                        | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::stack) env)
-    | (MUL::restofCommands, firstelem::secondelem::restofStack, env) -> (match (firstelem, secondelem) with
-                                                    | (Int(a),Int(b))-> processor restofCommands (Int(a*b)::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(a*b)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(a*b)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(a*b)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::stack) env)
+  in
 
-    | (REM::restofCommands, Int(0)::Int(b)::restofStack, env) -> processor restofCommands (Error::stack) env
-    | (DIV::restofCommands, Int(0)::Int(b)::restofStack, env) -> processor restofCommands (Error::stack) env
+(* let rec viewenv(input:(stackValue * stackValue) list list) = 
+  match input with
+  | ((one,two)::hd)::tl -> (match (one,two) with 
+                            | (hd1,tl1) -> print_string (svtostr(one)); print_string "="; print_string (svtostr(two)); print_string "\n\n";viewenv (hd::tl))
+                            | _-> () 
+in *)
 
-    | (REM::restofCommands, firstelem::secondelem::restofStack, env) -> (match (firstelem, secondelem) with
-                                                    | (Int(a),Int(b))-> processor restofCommands (Int(b mod a)::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(b mod a)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(b mod a)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(b mod a)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::stack) env)
+(* cl is the list of commands, stack is where the stackvalues are stored, env is where the bindings are stored*)
+  let rec processor cl (stack: stackValue list list) (env) = 
+  (* slowly build up the stack where you iterate through the cl and update the stack *)
+  viewstack(stack);
+  (* viewenv(env); *)
 
-    | (DIV::restofCommands, firstelem::secondelem::restofStack, env) -> (match (firstelem, secondelem) with
-                                                    | (Int(a),Int(b))-> processor restofCommands (Int(b/a)::restofStack) env
-                                                    | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
-                                                                          | (Int(a), Int(b)) -> print_string "name divide"; processor restofCommands (Int(b/a)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(b/a)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
-                                                                          | (Int(a), Int(b)) -> processor restofCommands (Int(b/a)::restofStack) env
-                                                                          | _ -> processor restofCommands (Error::stack) env) 
-                                                    | (_,_) -> processor restofCommands (Error::stack) env)
-      
-    | (IF::restofCommands, x::y::third::restofStack, env) -> (match third with
-                                                    | Bool(true) -> processor restofCommands (x::restofStack) env
-                                                    | Bool(false) -> processor restofCommands (y::restofStack) env
-                                                    | Name(a) -> processor (IF::restofCommands) ((find (Name(a)) env )::restofStack) env
-                                                    | _ -> processor restofCommands (Error::stack) env)
-         
-    | (c::restofCommands,[], env) -> print_string "lastcase";processor restofCommands (Error::stack) env (* if there is nothing in the stack*)
-    | (c::restCommands,restStack, env) -> processor restCommands (Error::stack) env(*all the cases that could not be matched by the previous cases *)
-    | ([],_, _) -> () (* changed the base case to return unit *) (* empty comlist and whatever stack*)
+  match (cl, stack, env) with
+  (*stops the execution of interpreter *)
+  | (QUIT::restofCommands, _, _) -> ()
+  (* pops a stackvalue from the stackvalue list *)
+  | (POP::restofCommands, (firstitempop::hd)::restofStack, env) -> processor restofCommands ((hd)::restofStack) env
+  (* performs the not operator with 1 bool otherwise error is pushed onto stack *) 
+  | (NEG::restofCommands, (hdelem::hd)::restofStack, env) -> (match hdelem with 
+                  | Int(numb) -> processor restofCommands ((Int(-1*numb)::hd)::restofStack) env
+                  | Name(givenname) -> (match (find(Name(givenname)) env ) with 
+                            | Name(givenname) -> processor restofCommands ((Error::hdelem::hd)::restofStack) env
+                            | Int(number) -> processor restofCommands ((Int(-1*number)::hd)::restofStack) env
+                            | _ -> processor restofCommands ((Error::hdelem::hd)::restofStack) env)
+                  | _-> processor restofCommands ((Error::hdelem::hd)::restofStack) env) 
+    (* only converts valid commands into strings or if there's an element in the stack environment *)
+  | (TOSTRING::restofCommands,stack, env) -> (match stack with 
+                  | []::stack -> processor restofCommands (((Error)::[])::stack) env
+                  | (firstelem::hd)::restofStack -> (match firstelem with
+                            | Bool(bval) -> processor restofCommands ((String (":" ^ (svtostr(Bool(bval)) ^ ":" ))::hd)::restofStack) env
+                            | _ -> processor restofCommands ((String (svtostr(firstelem))::hd)::restofStack) env )
+                  | _ -> processor restofCommands (((Error)::[])::stack) env)
+  (* pushes a stackvalue onto the stackvalue list *)
+  | (PUSH(item)::restofCommands, hd::stack, env) -> processor restofCommands ((item::hd)::stack) env
+  (*prints strings onto the output.txt *)
+  | (PRINTLN::restofCommands, (firstval::hd)::restofStack, env) -> (match firstval with 
+                  | String first -> file_write first; processor restofCommands ((hd)::restofStack) env
+                  | _ -> processor restofCommands ((Error::firstval::hd)::restofStack) env)
+  (* performs the not operator with 1 bool otherwise error is pushed onto stack *)              
+  | (NOT::restofCommands, (firsteleme::hd):: restofStack, env) -> (match firsteleme with
+                  | Bool b -> processor restofCommands (((Bool(not b))::hd)::restofStack) env
+                  | Name b ->  (match (find(Name(b)) env ) with 
+                            | Name(givenname) -> processor restofCommands ((Error::firsteleme::hd)::restofStack) env
+                            | Bool d -> processor restofCommands (((Bool(not d))::hd)::restofStack) env
+                            | _ -> processor (NOT::restofCommands) (((find (Name(b)) env )::hd)::restofStack) env)
+                  | _ -> processor restofCommands ((Error::firsteleme::hd)::restofStack) env)
+  (* find if the vlue for the Name(fvalue) exists, if it exists then have Name b = that value otherwise return error*)
+  | (BIND::restofCommands, (Name(fvalue)::Name(b)::hd)::restofStack, hdenv::tlenv) -> (match (find (Name(fvalue)) env) with
+                  | Int(newvalue) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Int(newvalue))::hdenv):: tlenv)
+                  | Bool(newvalue) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Bool(newvalue)) ::hdenv):: tlenv)
+                  | String(newvalue) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), String(newvalue)) ::hdenv):: tlenv)
+                  | Unit -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Unit) :: hdenv):: tlenv)
+                  | _ -> processor restofCommands ((Error::Name(fvalue)::Name b::hd)::restofStack) env) 
+  | (BIND::restofCommands, (Name(fvalue)::Name(b)::hd)::restofStack, env) -> (match (find (Name(fvalue)) env) with
+                  | Int(newvalue) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Int(newvalue))::[]):: env)
+                  | Bool(newvalue) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Bool(newvalue)) ::[]):: env)
+                  | String(newvalue) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), String(newvalue)) ::[]):: env)
+                  | Unit -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Unit) :: []):: env)
+                  | _ -> processor restofCommands ((Error::Name(fvalue)::Name b::hd)::restofStack) env) 
+  (* checks if the environment stack head is empty or not and then performs binding on the 2 nonnames *)
+  | (BIND::restofCommands, (firstvalue::secondvalue::hd)::restofStack, hdenv::tlenv) -> (match (firstvalue,secondvalue) with
+                  | (Int(fvalue), Name(b)) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Int(fvalue)) :: hdenv):: tlenv)
+                  | (Bool(fvalue),Name(b)) -> processor restofCommands ((Unit::hd)::restofStack) (((secondvalue, firstvalue) :: hdenv) ::tlenv);
+                  | (String(fvalue),Name(b)) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), String(fvalue)) :: hdenv) ::tlenv)
+                  | (Unit,Name(b)) -> processor restofCommands ((Unit::hd)::restofStack) (((secondvalue, firstvalue) :: hdenv):: tlenv)
+                  | _-> processor restofCommands ((Error::firstvalue::secondvalue::hd)::restofStack) env)
+  (* this next case is here because what if there are no preexisting bindings in the env *)
+  | (BIND::restofCommands, (firstvalue::secondvalue::hd)::restofStack, env) -> (match (firstvalue,secondvalue) with
+                  | (Int(fvalue), Name(b)) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Int(fvalue)) :: []) :: env)
+                  | (Bool(fvalue),Name(b)) ->  processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Bool(fvalue)) :: []) ::env)
+                  | (String(fvalue),Name(b)) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), String(fvalue)) :: []) ::env)
+                  | (Unit,Name(b)) -> processor restofCommands ((Unit::hd)::restofStack) (((Name(b), Unit) :: []):: env)
+                  | _-> processor restofCommands ((Error::firstvalue::secondvalue::hd)::restofStack) env)  
+    (* concatenates the first 2 elements if they are strings *)
+  | (CAT::restofCommands, (firstelement::secondelement::hd)::restofStack, env) -> (match (firstelement,secondelement) with
+                  | (String(a),String(b))-> processor restofCommands ((String(b ^ a)::hd)::restofStack) env                                                 
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                  | (String(a),String(b)) -> processor restofCommands ((String(b ^ a)::hd) ::restofStack) env
+                                  | _ -> processor restofCommands ((Error::firstelement::secondelement::hd)::restofStack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                  | (String(a),String(b)) -> processor restofCommands ((String(b ^ a)::hd) ::restofStack) env
+                                  | _ -> processor restofCommands ((Error::firstelement::secondelement::hd):: restofStack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                  | (String(a),String(b)) -> processor restofCommands ((String(b ^ a)::hd) ::restofStack) env
+                                  | _ -> processor restofCommands ((Error::firstelement::secondelement::hd):: restofStack) env)
+                  | (_,_) -> processor restofCommands ((Error::firstelement::secondelement::hd) :: restofStack) env)
+    (* performs the and operator with 2 bools otherwise error is pushed onto stack *)
+  | (AND::restofCommands, (firstelement::secondelement::hd)::restofStack, env) -> (match (firstelement,secondelement) with
+                  | (Bool b, Bool c)-> processor restofCommands (((Bool(b && c))::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                        | (Bool(a),Bool(b)) -> processor restofCommands (((Bool(a && b))::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelement::secondelement::hd):: restofStack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                        | (Bool(a),Bool(b)) -> processor restofCommands (((Bool(a && b))::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelement::secondelement::hd)::restofStack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                        | (Bool(a),Bool(b)) -> processor restofCommands (((Bool(a && b))::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelement::secondelement::hd):: restofStack) env) 
+                  | (_,_) -> processor restofCommands ((Error::firstelement::secondelement::hd):: restofStack) env)
+  (* performs the or operator with 2 bools otherwise error is pushed onto stack *)
+  | (OR::restofCommands, (firstelement :: secondelement :: hd)::restofStack, env) -> (match (firstelement,secondelement) with
+                  | (Bool b, Bool c)-> processor restofCommands ((Bool(b || c)::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                    | (Bool(a),Bool(b)) -> processor restofCommands ((Bool(a || b)::hd)::restofStack) env
+                                    | _ -> processor restofCommands ((Error::firstelement::secondelement::hd) :: restofStack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                    | (Bool(a),Bool(b)) -> processor restofCommands ((Bool(a || b)::hd)::restofStack) env
+                                    | _ -> processor restofCommands ((Error::firstelement::secondelement::hd) :: restofStack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                    | (Bool(a),Bool(b)) -> processor restofCommands ((Bool(a || b)::hd)::restofStack) env
+                                    | _ -> processor restofCommands ((Error::firstelement::secondelement::hd) :: restofStack) env) 
+                  | (_,_) -> processor restofCommands ((Error::firstelement::secondelement::hd) :: restofStack) env)
+  (*checks if the first two elements are equal in value *)
+  | (EQUAL::restofCommands, (firstelem::secondelem::hd)::restofStack, env) -> (match (firstelem, secondelem) with
+                  | (Int(a),Int(b))-> processor restofCommands (((Bool(a=b))::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                    | (Int(a),Int(b)) -> processor restofCommands (((Bool(a=b))::hd)::restofStack) env
+                                    | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                    | (Int(a),Int(b)) -> processor restofCommands (((Bool(a=b))::hd)::restofStack) env
+                                    | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                    | (Int(a),Int(b)) -> processor restofCommands (((Bool(a=b))::hd)::restofStack) env
+                                    | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (_,_) -> processor restofCommands ((Error::hd)::stack) env)
+  (*checks if the firstelement is less than the second element *)
+  | (LESSTHAN::restofCommands, (firstelem::secondelem::hd)::restofStack, env) -> (match (firstelem, secondelem) with
+                  | (Int(a),Int(b))->  processor restofCommands (((Bool(a>b))::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                  | (Int(a),Int(b)) -> processor restofCommands (((Bool(a>b))::hd)::restofStack) env
+                                  | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                  | (Int(a),Int(b)) -> processor restofCommands (((Bool(a>b))::hd)::restofStack) env
+                                  | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                  | (Int(a),Int(b)) -> processor restofCommands (((Bool(a>b))::hd)::restofStack) env
+                                  | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (_,_) -> processor restofCommands ((Error::hd)::stack) env)
+  (*swaps the first two element*)
+  | (SWAP::restofCommands, (firstitem::seconditem::hd)::restofStack, env) -> processor restofCommands ((seconditem::firstitem::hd)::restofStack) env             
+  (*takes addition into account *)
+  | (ADD::restofCommands, (firstelem::secondelem::hd)::restofStack, env) -> (match (firstelem, secondelem) with
+                  | (Int(a),Int(b))-> processor restofCommands ((Int(a+b)::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                      | (Int(a), Int(b)) -> processor restofCommands ((Int(a+b)::hd)::restofStack) env
+                                      (* a argument = Name c; c argument = 3(the value of the Name a)*)
+                                      | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                                      (* error in the above line so fix it pleaseeeeeeee*)
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                      | (Int(a), Int(b)) -> processor restofCommands ((Int(a+b)::hd)::restofStack) env
+                                      | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                      | (Int(a), Int(b)) -> processor restofCommands ((Int(a+b)::hd)::restofStack) env
+                                      | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (_,_) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env)
+  (*takes subtraction into account *)
+  | (SUB::restofCommands, (firstelem::secondelem::hd)::restofStack, env) ->  (match (firstelem, secondelem) with
+                  | (Int(a),Int(b))-> processor restofCommands ((Int(b-a)::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                      | (Int(a), Int(b)) -> processor restofCommands ((Int(b-a)::hd)::restofStack) env
+                                      | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                      | (Int(a), Int(b)) -> processor restofCommands ((Int(b-a)::hd)::restofStack) env
+                                      | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                      | (Int(a), Int(b)) -> processor restofCommands ((Int(b-a)::hd)::restofStack) env
+                                      | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (_,_) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env)
+  (*takes multiplication into account *)
+  | (MUL::restofCommands, (firstelem::secondelem::hd)::restofStack, env) -> (match (firstelem, secondelem) with
+                  | (Int(a),Int(b))-> processor restofCommands ((Int(a*b)::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(a*b)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(a*b)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(a*b)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (_,_) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env)
+  (* these 2 cases take care of division by zero if both values in the stack are numbers  *)
+  | (REM::restofCommands, (Int(0)::Int(b)::hd)::restofStack, env) -> processor restofCommands ((Error::Int(0)::Int(b)::hd)::stack) env
+  | (DIV::restofCommands, (Int(0)::Int(b)::hd)::restofStack, env) -> processor restofCommands ((Error::Int(0)::Int(b)::hd)::stack) env
+  | (REM::restofCommands, (firstelem::secondelem::hd)::restofStack, env) -> (match (firstelem, secondelem) with
+                  (* first cases in the following statements tries to avoid division by zero *)
+                  | (Int(a),Int(b))-> processor restofCommands ((Int(b mod a)::hd)::restofStack) env
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                        | (Int(0), _) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env  
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(b mod a)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                        | (Int(0), y) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env  
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(b mod a)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                        | (x, Name(b)) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env 
+                                        | (Int(0), _) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env 
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(b mod a)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (_,_) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env)
+  | (DIV::restofCommands, (firstelem::secondelem::hd)::restofStack, env) -> (match (firstelem, secondelem) with
+                  | (Int(a),Int(b))-> processor restofCommands ((Int(b/a)::hd)::restofStack) env
+                  (* first cases in the following statements tries to avoid division by zero *)
+                  | (Name(a),Name(b)) -> (match ((find (Name(a)) env ),(find (Name(b)) env)) with
+                                        | (Int(0), _) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env   
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(b/a)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (Name(a),y) -> (match ((find (Name(a)) env ), y) with
+                                        | (Int(0),y) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(b/a)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (x, Name(b)) -> (match (x, (find (Name(b)) env )) with
+                                        | (Int(0), _) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env
+                                        | (Int(a), Int(b)) -> processor restofCommands ((Int(b/a)::hd)::restofStack) env
+                                        | _ -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env) 
+                  | (_,_) -> processor restofCommands ((Error::firstelem::secondelem::hd)::stack) env)
+  (* if statement for now checks if the third element is true or not *)
+  | (IF::restofCommands, (x::y::third::hd)::restofStack, env) -> (match third with
+                  | Bool(true) -> processor restofCommands ((x::hd)::restofStack) env
+                  | Bool(false) -> processor restofCommands ((y::hd)::restofStack) env
+                  | Name(a) -> (match (find (Name(a)) env ) with
+                                | Bool(true) -> processor restofCommands ((x::hd)::restofStack) env
+                                | Bool(false) -> processor restofCommands ((y::hd)::restofStack) env
+                                | _-> processor restofCommands ((Error::x::y::third::hd)::restofStack) env)
+                  | _ -> processor restofCommands ((Error::x::y::third::hd)::restofStack) env)
+  (* beginning of an opening clause *)
+  | (LET::restofCommands, stack ,env) -> print_string "let"; processor restofCommands ([]::stack) ([]::env)
+  (* ending of an opening clause *)
+  | (END::restofCommands, hds::restofStack , hde::env) -> print_string "end"; (match (hds, restofStack) with
+                  | ([], restofinnerStack) -> processor restofCommands restofinnerStack env
+                  | (hd1::tl,hd2::restofinnerStack) -> processor restofCommands ((hd1::hd2)::restofinnerStack) env
+                  | (_,_) -> processor restofCommands restofStack env)
+  (* if there is nothing in the stack*)       
+  | (c::restofCommands,(firstelem::secondelem::hd)::restofStack, env) -> processor restofCommands ((Error::hd)::restofStack) env 
+    (*all the cases that could not be matched by the previous cases *)
+  | (_,_, _) -> print_string "hello";()
   
-in 
+  in
 
-processor comList [] [];;
+processor comList [[]] [[]];;
 
-(* interpreter("input7.txt", "output.txt") *)
+interpreter("input24.txt", "output.txt")
