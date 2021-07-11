@@ -34,7 +34,7 @@ OCaml Interpreter that allows users to perform operations, bind values, and crea
   2) Prepare an input file with a command on every line
   3) Make sure the name of the input file matches the name on the last line of the interpreter.ml
   4) Go to terminal 
-  5) Execute 'ocaml str.cma interpreter.ml'
+  5) Execute `ocaml str.cma interpreter.ml`
   6) Enjoy!
 
 ## References
