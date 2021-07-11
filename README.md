@@ -1,5 +1,5 @@
 # Interpreter
-![Project Image](https://imgur.com/a/tlYBozM)
+![Project Image](Ocaml_project_image.png)
 
 ---
 
